@@ -1,7 +1,14 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 
+void startServer(){
+
+}
 
 int main(){
-	/////3333456789
+
+
+
+	return 0;
 }
