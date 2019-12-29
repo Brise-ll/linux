@@ -30,6 +30,30 @@ void startServer(){
 		printf("listen server socket error\n");
 		return;
 	}
+
+	//不断接收客户端连接，并为每个客户创建线程
+	while (1) {
+
+		//wait for client connection
+		printf("waiting for incoming client...\n");
+
+		struct sockaddr_in clientSocketAddr;
+		int server_addr_len = sizeof(struct sockaddr_in);
+
+		//接收客户端连接，返回一个socket. 直到成功接收到一个连接为止
+		int clientSocketFd = accept(serverSocketFd,
+				(struct sockaddr *) &clientSocketAddr, &server_addr_len);
+
+		if (clientSocketFd < 0) {
+			//接收失败
+			printf("Error: accept failed.\n");
+			continue;
+		}
+
+		//创建线程与client交互
+		pthread_t pid;
+		pthread_create(&pid, NULL, workerThread, &clientSocketFd);
+	}
 }
 
 void workerThread(void* para){
