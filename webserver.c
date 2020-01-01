@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +7,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-void startServer(){
+void startServer() {
 	//创建服务器socket地址
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
@@ -56,14 +55,46 @@ void startServer(){
 	}
 }
 
-void workerThread(void* para){
+//利用socket发送数据
+int sendData(int socketFd, const void* buf, size_t length) {
+	int status = send(socketFd, buf, length, 0); //发送数据，返回实际发送的字节数
+
+	//检查发送结果是否正常
+	if (status <= 0) {
+		return 0;
+	}
+	return 1;
+}
+
+//利用socket接收数据
+int recvData(int socketFd, void* buf, size_t length) {
+	int receivedBytes = 0;
+
+	//持续接收，直到收到length个字节为止
+	while (receivedBytes < length) {
+		void* currentBuf = buf + receivedBytes; //接收到的数据要存放的起始地址
+		int remainBytes = length - receivedBytes; //需要接收的剩余字节数
+		int status = recv(socketFd, currentBuf, remainBytes, 0); //接收数据，返回实际接收的字节数
+
+		//检查接收结果是否正常
+		if (status <= 0) {
+			return 0;
+		}
+
+		receivedBytes += status;
+	}
+
+	return 1;
+}
+
+void workerThread(void* para) {
+	int fd = *((int*) para);
 
 }
 
-int main(){
+int main() {
 
 	startServer();
 	return 0;
 }
-
 
