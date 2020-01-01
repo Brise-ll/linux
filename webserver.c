@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#define BUFSIZE 256
+char buff[BUFSIZE];
+
 void startServer() {
 	//创建服务器socket地址
 	struct sockaddr_in server_addr;
@@ -87,9 +90,39 @@ int recvData(int socketFd, void* buf, size_t length) {
 	return 1;
 }
 
-void workerThread(void* para) {
-	int fd = *((int*) para);
 
+int readLine(int clientsfd, char* line) {
+
+	int length = 0;
+	recv(clientsfd, buff, 1, 0);
+	while (buff[0] != '\n') {
+		if (length >= BUFSIZE) {
+			return 0;
+		}
+		line[length++] = buff[0];
+		recv(clientsfd, buff, 1, 0);
+	}
+	line[length] = 0;
+	return 1;
+}
+
+void send_500(int clientsfd) {
+	sprintf(buff, "HTTP/1.1 500 Internal Server Error\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+}
+
+void workerThread(void* para) {
+	int socketFd = *((int*) para);
+
+	//read first line
+	char line[BUFSIZE];
+	if (!readLine(socketFd, line)) {
+		send_500(socketFd);
+		return;
+	}
+
+	//debug message, print header
+	printf("header: %s\n", line);
 }
 
 int main() {
