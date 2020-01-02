@@ -111,6 +111,19 @@ void send_500(int clientsfd) {
 	send(clientsfd, buff, strlen(buff), 0);
 }
 
+//send file content to socket file descriptor
+void send_file(int clientsfd, int fd) {
+	sprintf(buff, "\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+
+	int n = read(fd, buff, BUFSIZE);
+	while (n > 0) {
+		send(clientsfd, buff, n, 0);
+		n = read(fd, buff, BUFSIZE);
+	}
+	close(fd);
+}
+
 void workerThread(void* para) {
 	int socketFd = *((int*) para);
 
@@ -124,6 +137,7 @@ void workerThread(void* para) {
 	//debug message, print header
 	printf("header: %s\n", line);
 }
+
 
 int main() {
 
