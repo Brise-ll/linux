@@ -111,6 +111,11 @@ void send_500(int clientsfd) {
 	send(clientsfd, buff, strlen(buff), 0);
 }
 
+void send_404(int clientsfd) {
+	sprintf(buff, "HTTP/1.1 404 Not Found\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+}
+
 //send file content to socket file descriptor
 void send_file(int clientsfd, int fd) {
 	sprintf(buff, "\r\n");
@@ -125,6 +130,11 @@ void send_file(int clientsfd, int fd) {
 }
 
 void workerThread(void* para) {
+	char protocol[BUFSIZE];
+	char filename[BUFSIZE];
+	char contentLengthLabel[BUFSIZE];
+	int contentLength;
+
 	int socketFd = *((int*) para);
 
 	//read first line
@@ -136,6 +146,11 @@ void workerThread(void* para) {
 
 	//debug message, print header
 	printf("header: %s\n", line);
+
+	//get protocol type, GET or PUT
+	sscanf(line, "%s", protocol);
+
+
 }
 
 
