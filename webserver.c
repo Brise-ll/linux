@@ -122,15 +122,20 @@ void send_200(int clientsfd) {
 	send(clientsfd, buff, strlen(buff), 0);
 }
 
+void send_400(int clientsfd) {
+	sprintf(buff, "HTTP/1.1 400 Bad Request\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+}
+
 //send file content to socket file descriptor
 void send_file(int clientsfd, FILE* fp) {
 	sprintf(buff, "\r\n");
 	send(clientsfd, buff, strlen(buff), 0);
 
-	size_t n = fread(buff, sizeof(char), BUFSIZE, fp);
+	size_t n = fread(buff, 1, BUFSIZE, fp);
 	while (n > 0) {
 		send(clientsfd, buff, n, 0);
-		n = fread(buff, sizeof(char), BUFSIZE, fp);
+		n = fread(buff, 1, BUFSIZE, fp);
 	}
 	fclose(fp);
 }
@@ -175,7 +180,7 @@ void* workerThread(void* para) {
 
 		}
 	} else {
-
+		send_400(socketFd);
 	}
 
 	close(socketFd);
