@@ -10,6 +10,8 @@
 #define BUFSIZE 256
 char buff[BUFSIZE];
 
+void workerThread(void* para);
+
 void startServer() {
 	//创建服务器socket地址
 	struct sockaddr_in server_addr;
