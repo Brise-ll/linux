@@ -117,6 +117,11 @@ void send_404(int clientsfd) {
 	send(clientsfd, buff, strlen(buff), 0);
 }
 
+void send_200(int clientsfd) {
+	sprintf(buff, "HTTP/1.1 200 OK\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+}
+
 //send file content to socket file descriptor
 void send_file(int clientsfd, FILE* fp) {
 	sprintf(buff, "\r\n");
@@ -167,9 +172,13 @@ void* workerThread(void* para) {
 		} else {
 			send_200(socketFd);
 			send_file(socketFd, fp);
+
 		}
+	} else {
+
 	}
 
+	close(socketFd);
 	return NULL;
 }
 
