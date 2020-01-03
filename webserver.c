@@ -10,7 +10,7 @@
 #define BUFSIZE 256
 char buff[BUFSIZE];
 
-void workerThread(void* para);
+void* workerThread(void* para);
 
 void startServer() {
 	//创建服务器socket地址
@@ -35,11 +35,11 @@ void startServer() {
 		return;
 	}
 
+	//wait for client connection
+	printf("waiting for incoming client...\n");
+
 	//不断接收客户端连接，并为每个客户创建线程
 	while (1) {
-
-		//wait for client connection
-		printf("waiting for incoming client...\n");
 
 		struct sockaddr_in clientSocketAddr;
 		int server_addr_len = sizeof(struct sockaddr_in);
@@ -56,7 +56,7 @@ void startServer() {
 
 		//创建线程与client交互
 		pthread_t pid;
-		pthread_create(&pid, NULL, workerThread, &clientSocketFd);
+		pthread_create(&pid, NULL, workerThread, (void*) &clientSocketFd);
 	}
 }
 
@@ -92,7 +92,6 @@ int recvData(int socketFd, void* buf, size_t length) {
 	return 1;
 }
 
-
 int readLine(int clientsfd, char* line) {
 
 	int length = 0;
@@ -119,19 +118,19 @@ void send_404(int clientsfd) {
 }
 
 //send file content to socket file descriptor
-void send_file(int clientsfd, int fd) {
+void send_file(int clientsfd, FILE* fp) {
 	sprintf(buff, "\r\n");
 	send(clientsfd, buff, strlen(buff), 0);
 
-	int n = read(fd, buff, BUFSIZE);
+	size_t n = fread(buff, sizeof(char), BUFSIZE, fp);
 	while (n > 0) {
 		send(clientsfd, buff, n, 0);
-		n = read(fd, buff, BUFSIZE);
+		n = fread(buff, sizeof(char), BUFSIZE, fp);
 	}
-	close(fd);
+	fclose(fp);
 }
 
-void workerThread(void* para) {
+void* workerThread(void* para) {
 	char protocol[BUFSIZE];
 	char filename[BUFSIZE];
 	char contentLengthLabel[BUFSIZE];
@@ -143,7 +142,7 @@ void workerThread(void* para) {
 	char line[BUFSIZE];
 	if (!readLine(socketFd, line)) {
 		send_500(socketFd);
-		return;
+		return NULL;
 	}
 
 	//debug message, print header
@@ -152,12 +151,30 @@ void workerThread(void* para) {
 	//get protocol type, GET or PUT
 	sscanf(line, "%s", protocol);
 
+	if (strcmp(protocol, "GET") == 0) {
+		//get file name
+		sscanf(line, "%*s%s", filename);
+		strcpy(buff, filename + 1);
+		strcpy(filename, buff);
 
+		//debug message, print file name
+		printf("the file name requesting: %s\n", filename);
+
+		FILE* fp = fopen(filename, "rb");
+		if (!fp) {
+			//not found
+			send_404(socketFd);
+		} else {
+			send_200(socketFd);
+			send_file(socketFd, fp);
+		}
+	}
+
+	return NULL;
 }
 
-
 int main() {
-
+	setbuf(stdout, NULL);
 	startServer();
 	return 0;
 }
