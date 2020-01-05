@@ -182,16 +182,17 @@ int getInt(char* str, char* token) {
 	return result;
 }
 
-char getChar(char* str, char* token) {
-	int index = indexOf(str, token);
-
-	char result;
-	sscanf(str + index + 5, "%c", &result);
-	return result;
-}
-
-void createResultFile(int result){
-
+void createResultFile(int result) {
+	FILE* fp = fopen("result.html", "w");
+	fprintf(fp, "<html>\n");
+	fprintf(fp, "<head>\n");
+	fprintf(fp, "<title>Your result</title>\n");
+	fprintf(fp, "</head>\n");
+	fprintf(fp, "<body>\n");
+	fprintf(fp, "<h1>your result is: %d</h1>\n", result);
+	fprintf(fp, "</body>\n");
+	fprintf(fp, "</html>\n");
+	fclose(fp);
 }
 
 void* workerThread(void* para) {
@@ -252,27 +253,28 @@ void* workerThread(void* para) {
 
 	if (isQuery) {
 		printf("query: %s\n", query);
-		if (strcmp(filename == "compute") == 0) {
-			int num1 = getInt(query, "num1");
-			int num2 = getInt(query, "num2");
-			char type = getChar(query, "type");
 
-			int result = 0;
-			if (type == '+') {
-				result = num1 + num2;
-			} else if (type == '-') {
-				result = num1 - num2;
-			} else if (type == '*') {
-				result = num1 * num2;
-			} else {
-				result = num1 / num2;
-			}
+		int num1 = getInt(query, "num1");
+		int num2 = getInt(query, "num2");
+		int type = getInt(query, "type");
 
-			createResultFile(result);
-			send_200(socketFd);
-			FILE* fp = fopen("result.html", "rb");
-			send_file(socketFd, fp);
+		printf("num1: %d, num2: %d, type: %d\n", num1, num2, type);
+
+		int result = 0;
+		if (type == 1) {
+			result = num1 + num2;
+		} else if (type == 2) {
+			result = num1 - num2;
+		} else if (type == 3) {
+			result = num1 * num2;
+		} else {
+			result = num1 / num2;
 		}
+
+		createResultFile(result);
+		send_200(socketFd);
+		FILE* fp = fopen("result.html", "rb");
+		send_file(socketFd, fp);
 	} else {
 		FILE* fp = fopen(filename, "rb");
 		if (!fp) {
