@@ -233,7 +233,6 @@ void* workerThread(void* para) {
 		}
 	}
 
-	//close(socketFd);
 	return NULL;
 }
 
