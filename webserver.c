@@ -129,9 +129,18 @@ void send_400(int clientsfd) {
 
 //send file content to socket file descriptor
 void send_file(int clientsfd, FILE* fp) {
+	int length = 0;
+	while (fgetc(fp) != EOF) {
+		length++;
+	}
+
+	sprintf(buff, "Content-Length: %d\r\nContent-Type: text/html\r\n", length);
+	send(clientsfd, buff, strlen(buff), 0);
+
 	sprintf(buff, "\r\n");
 	send(clientsfd, buff, strlen(buff), 0);
 
+	rewind(fp);
 	size_t n = fread(buff, 1, BUFSIZE, fp);
 	while (n > 0) {
 		send(clientsfd, buff, n, 0);
@@ -140,11 +149,38 @@ void send_file(int clientsfd, FILE* fp) {
 	fclose(fp);
 }
 
+//查找token在str中的位置，如果不存在返回-1
+int indexOf(char* str, char* token) {
+	int len1 = strlen(str);
+	int len2 = strlen(token);
+
+	if (len2 > len1) {
+		return -1;
+	}
+
+	for (int i = 0; i < len1 - len2 - 1; i++) {
+		int found = 1;
+		for (int j = 0; j < len2; j++) {
+			if (str[i + j] != token[j]) {
+				found = 0;
+			}
+		}
+
+		if (found) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 void* workerThread(void* para) {
 	char protocol[BUFSIZE];
 	char filename[BUFSIZE];
+	char query[BUFSIZE];
 	char contentLengthLabel[BUFSIZE];
 	int contentLength;
+	int isQuery = 0;
 
 	int socketFd = *((int*) para);
 
@@ -162,14 +198,31 @@ void* workerThread(void* para) {
 	sscanf(line, "%s", protocol);
 
 	if (strcmp(protocol, "GET") == 0) {
-		//get file name
-		sscanf(line, "%*s%s", filename);
-		strcpy(buff, filename + 1);
-		strcpy(filename, buff);
+		strcpy(query, line);
+		int index = indexOf(line, "?");
+		if (index != -1) {
+			isQuery = 1;
+			strcpy(query, query + index + 1);
+		}
+	} else if (strcmp(protocol, "POST") == 0) {
+		isQuery = 1;
+		readLine(socketFd, query);
+	} else {
+		send_400(socketFd);
+		return NULL;
+	}
 
-		//debug message, print file name
-		printf("the file name requesting: %s\n", filename);
+	//get file name
+	sscanf(line, "%*s%s", filename);
+	strcpy(buff, filename + 1);
+	strcpy(filename, buff);
 
+	//debug message, print file name
+	printf("the file name requesting: %s\n", filename);
+
+	if (isQuery) {
+
+	} else {
 		FILE* fp = fopen(filename, "rb");
 		if (!fp) {
 			//not found
@@ -177,13 +230,10 @@ void* workerThread(void* para) {
 		} else {
 			send_200(socketFd);
 			send_file(socketFd, fp);
-
 		}
-	} else {
-		send_400(socketFd);
 	}
 
-	close(socketFd);
+	//close(socketFd);
 	return NULL;
 }
 
