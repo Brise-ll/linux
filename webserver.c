@@ -174,12 +174,30 @@ int indexOf(char* str, char* token) {
 	return -1;
 }
 
+int getInt(char* str, char* token) {
+	int index = indexOf(str, token);
+
+	int result;
+	sscanf(str + index + 5, "%d", &result);
+	return result;
+}
+
+char getChar(char* str, char* token) {
+	int index = indexOf(str, token);
+
+	char result;
+	sscanf(str + index + 5, "%c", &result);
+	return result;
+}
+
+void createResultFile(int result){
+
+}
+
 void* workerThread(void* para) {
 	char protocol[BUFSIZE];
 	char filename[BUFSIZE];
 	char query[BUFSIZE];
-	char contentLengthLabel[BUFSIZE];
-	int contentLength;
 	int isQuery = 0;
 
 	int socketFd = *((int*) para);
@@ -205,8 +223,20 @@ void* workerThread(void* para) {
 			strcpy(query, query + index + 1);
 		}
 	} else if (strcmp(protocol, "POST") == 0) {
+		//read the remaining lines in header
+		//the target of while loop is finding the empty line after header
+		while (1) {
+			readLine(socketFd, line);
+
+			//printf("line: %s\n", line);
+			if (strlen(line) == 1) {
+				//find the empty line, only contains '\r'
+				break;
+			}
+		}
+
 		isQuery = 1;
-		readLine(socketFd, query);
+		recv(socketFd, query, BUFSIZE, 0);
 	} else {
 		send_400(socketFd);
 		return NULL;
@@ -221,7 +251,28 @@ void* workerThread(void* para) {
 	printf("the file name requesting: %s\n", filename);
 
 	if (isQuery) {
+		printf("query: %s\n", query);
+		if (strcmp(filename == "compute") == 0) {
+			int num1 = getInt(query, "num1");
+			int num2 = getInt(query, "num2");
+			char type = getChar(query, "type");
 
+			int result = 0;
+			if (type == '+') {
+				result = num1 + num2;
+			} else if (type == '-') {
+				result = num1 - num2;
+			} else if (type == '*') {
+				result = num1 * num2;
+			} else {
+				result = num1 / num2;
+			}
+
+			createResultFile(result);
+			send_200(socketFd);
+			FILE* fp = fopen("result.html", "rb");
+			send_file(socketFd, fp);
+		}
 	} else {
 		FILE* fp = fopen(filename, "rb");
 		if (!fp) {
