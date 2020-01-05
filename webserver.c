@@ -10,8 +10,11 @@
 #define BUFSIZE 256
 char buff[BUFSIZE];
 
+//工作线程函数，在此函数中负责处理客户端的请求
 void* workerThread(void* para);
 
+
+//启动服务器并接受连接
 void startServer() {
 	//创建服务器socket地址
 	struct sockaddr_in server_addr;
@@ -60,47 +63,25 @@ void startServer() {
 	}
 }
 
-//利用socket发送数据
-int sendData(int socketFd, const void* buf, size_t length) {
-	int status = send(socketFd, buf, length, 0); //发送数据，返回实际发送的字节数
-
-	//检查发送结果是否正常
-	if (status <= 0) {
-		return 0;
-	}
-	return 1;
-}
-
-//利用socket接收数据
-int recvData(int socketFd, void* buf, size_t length) {
-	int receivedBytes = 0;
-
-	//持续接收，直到收到length个字节为止
-	while (receivedBytes < length) {
-		void* currentBuf = buf + receivedBytes; //接收到的数据要存放的起始地址
-		int remainBytes = length - receivedBytes; //需要接收的剩余字节数
-		int status = recv(socketFd, currentBuf, remainBytes, 0); //接收数据，返回实际接收的字节数
-
-		//检查接收结果是否正常
-		if (status <= 0) {
-			return 0;
-		}
-
-		receivedBytes += status;
-	}
-
-	return 1;
-}
-
+//从socket中读取一行数据
 int readLine(int clientsfd, char* line) {
 
-	int length = 0;
+	int length = 0;//读到的数据长度
+
+	//读取一个字符
 	recv(clientsfd, buff, 1, 0);
+
+	//如果字符不是'\n'，则持续读
 	while (buff[0] != '\n') {
 		if (length >= BUFSIZE) {
+			//超过缓存，读取失败
 			return 0;
 		}
+
+		//保存读到的字符
 		line[length++] = buff[0];
+
+		//读取下一个字符
 		recv(clientsfd, buff, 1, 0);
 	}
 	line[length] = 0;
@@ -134,12 +115,15 @@ void send_file(int clientsfd, FILE* fp) {
 		length++;
 	}
 
+	//发送Content-Length, Content-Type
 	sprintf(buff, "Content-Length: %d\r\nContent-Type: text/html\r\n", length);
 	send(clientsfd, buff, strlen(buff), 0);
 
+	//发送换行符
 	sprintf(buff, "\r\n");
 	send(clientsfd, buff, strlen(buff), 0);
 
+	//发送文件内容
 	rewind(fp);
 	size_t n = fread(buff, 1, BUFSIZE, fp);
 	while (n > 0) {
@@ -174,6 +158,7 @@ int indexOf(char* str, char* token) {
 	return -1;
 }
 
+//从请求字符串中获取数字，如s = "a=1&b=3&c=3"中，getInt(s, "a') == 1;
 int getInt(char* str, char* token) {
 	int index = indexOf(str, token);
 
@@ -182,6 +167,7 @@ int getInt(char* str, char* token) {
 	return result;
 }
 
+//创建数字计算的结果网页文件
 void createResultFile(int result) {
 	FILE* fp = fopen("result.html", "w");
 	fprintf(fp, "<html>\n");
@@ -195,6 +181,7 @@ void createResultFile(int result) {
 	fclose(fp);
 }
 
+//工作线程函数
 void* workerThread(void* para) {
 	char protocol[BUFSIZE];
 	char filename[BUFSIZE];
@@ -218,6 +205,8 @@ void* workerThread(void* para) {
 
 	if (strcmp(protocol, "GET") == 0) {
 		strcpy(query, line);
+
+		//如果包含?, 是计算请求，如http://localhost/compute?num1=3&type=3&num2=3
 		int index = indexOf(line, "?");
 		if (index != -1) {
 			isQuery = 1;
@@ -252,6 +241,7 @@ void* workerThread(void* para) {
 	printf("the file name requesting: %s\n", filename);
 
 	if (isQuery) {
+		//是计算请求
 		printf("query: %s\n", query);
 
 		int num1 = getInt(query, "num1");
@@ -276,6 +266,8 @@ void* workerThread(void* para) {
 		FILE* fp = fopen("result.html", "rb");
 		send_file(socketFd, fp);
 	} else {
+		//是获取网页的请求
+
 		FILE* fp = fopen(filename, "rb");
 		if (!fp) {
 			//not found
