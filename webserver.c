@@ -7,13 +7,11 @@
 #include <unistd.h>
 #include <pthread.h>
 
-
 #define BUFSIZE 256
 char buff[BUFSIZE];
 
 //工作线程函数，在此函数中负责处理客户端的请求
 void* workerThread(void* para);
-
 
 //启动服务器并接受连接
 void startServer() {
@@ -67,7 +65,7 @@ void startServer() {
 //从socket中读取一行数据
 int readLine(int clientsfd, char* line) {
 
-	int length = 0;//读到的数据长度
+	int length = 0; //读到的数据长度
 
 	//读取一个字符
 	recv(clientsfd, buff, 1, 0);
@@ -91,11 +89,6 @@ int readLine(int clientsfd, char* line) {
 
 void send_500(int clientsfd) {
 	sprintf(buff, "HTTP/1.1 500 Internal Server Error\r\n");
-	send(clientsfd, buff, strlen(buff), 0);
-}
-
-void send_404(int clientsfd) {
-	sprintf(buff, "HTTP/1.1 404 Not Found\r\n");
 	send(clientsfd, buff, strlen(buff), 0);
 }
 
@@ -132,6 +125,14 @@ void send_file(int clientsfd, FILE* fp) {
 		n = fread(buff, 1, BUFSIZE, fp);
 	}
 	fclose(fp);
+}
+
+void send_404(int clientsfd) {
+	sprintf(buff, "HTTP/1.1 404 Not Found\r\n");
+	send(clientsfd, buff, strlen(buff), 0);
+
+	FILE* fp = fopen("no.html", "rb");
+	send_file(clientsfd, fp);
 }
 
 //查找token在str中的位置，如果不存在返回-1
